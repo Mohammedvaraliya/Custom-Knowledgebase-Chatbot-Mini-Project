@@ -14,10 +14,6 @@ app.use(
   cors({ origin: true, methods: ["GET", "POST", "OPTIONS"], credentials: true })
 );
 app.use(express.json({ limit: "1mb" }));
-app.options(
-  "/*",
-  cors({ origin: true, methods: ["GET", "POST", "OPTIONS"], credentials: true })
-);
 
 if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
   console.warn(
