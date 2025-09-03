@@ -10,11 +10,14 @@ dotenv.config();
 
 const PORT = process.env.PORT || 8787;
 const app = express();
-app.use(
-  cors({ origin: true, methods: ["GET", "POST", "OPTIONS"], credentials: true })
-);
+const corsOptions = {
+  origin: true, // Or explicitly: ["https://kjsim-chatbot.netlify.app"]
+  methods: ["GET", "POST", "OPTIONS"],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
-app.options("*", cors());
 
 if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
   console.warn(
