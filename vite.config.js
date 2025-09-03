@@ -13,7 +13,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/api": "http://localhost:8787",
+      "/api": "https://custom-knowledgebase-chatbot-mini-project.onrender.com",
     },
   },
 });
