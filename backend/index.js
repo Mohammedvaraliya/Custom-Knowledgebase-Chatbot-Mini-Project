@@ -170,17 +170,17 @@ app.listen(PORT, async () => {
   );
   await loadKb();
 
-  // // 🔁 Start the keep-alive ping loop
-  // const SELF_URL =
-  //   process.env.API_END_POINT ||
-  //   `https://custom-knowledgebase-chatbot-mini-project.onrender.com`;
+  // 🔁 Start the keep-alive ping loop
+  const SELF_URL =
+    process.env.API_END_POINT ||
+    `https://custom-knowledgebase-chatbot-mini-project.onrender.com`;
 
-  // setInterval(async () => {
-  //   try {
-  //     console.log("⏰ Pinging keep-alive endpoint to keep server active...");
-  //     await axios.get(`${SELF_URL}/api/keep-alive`);
-  //   } catch (e) {
-  //     console.error("[Keep-Alive Ping Error]", e.message);
-  //   }
-  // }, 3 * 60 * 1000);
+  setInterval(async () => {
+    try {
+      console.log("⏰ Pinging keep-alive endpoint to keep server active...");
+      await axios.get(`${SELF_URL}/api/keep-alive`);
+    } catch (e) {
+      console.error("[Keep-Alive Ping Error]", e.message);
+    }
+  }, 3 * 60 * 1000);
 });
