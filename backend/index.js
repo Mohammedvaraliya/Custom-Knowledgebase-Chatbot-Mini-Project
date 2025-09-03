@@ -159,11 +159,15 @@ app.get("/api/keep-alive", (_, res) => {
 });
 
 app.listen(PORT, async () => {
-  console.log(`[server] listening on http://localhost:${PORT}`);
+  console.log(
+    `[server] listening on https://custom-knowledgebase-chatbot-mini-project.onrender.com:${PORT}`
+  );
   await loadKb();
 
   // 🔁 Start the keep-alive ping loop
-  const SELF_URL = process.env.API_END_POINT || `http://localhost:${PORT}`;
+  const SELF_URL =
+    process.env.API_END_POINT ||
+    `https://custom-knowledgebase-chatbot-mini-project.onrender.com:${PORT}`;
 
   setInterval(async () => {
     try {
