@@ -30,6 +30,8 @@ export default function ChatWindow() {
     },
   ]);
 
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
   const listRef = useRef(null);
 
   const canSend = useMemo(
@@ -54,7 +56,7 @@ export default function ChatWindow() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: [...messages, userMsg], role }),
