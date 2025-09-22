@@ -203,7 +203,7 @@ app.get("/api/keep-alive", (_, res) => {
 
 app.listen(PORT, async () => {
   console.log(
-    `[server] listening on http://localhost:${PORT} - env: ${
+    `[server] listening on https://custom-knowledgebase-chatbot-mini-project.onrender.com - env: ${
       process.env.NODE_ENV || "dev"
     }`
   );
@@ -212,7 +212,10 @@ app.listen(PORT, async () => {
   // 🔁 Start the keep-alive ping loop
   const SELF_URL =
     process.env.API_END_POINT ||
-    `https://localhost:${PORT}`.replace("http://", "https://");
+    `https://custom-knowledgebase-chatbot-mini-project.onrender.com`.replace(
+      "http://",
+      "https://"
+    );
 
   setInterval(async () => {
     try {
