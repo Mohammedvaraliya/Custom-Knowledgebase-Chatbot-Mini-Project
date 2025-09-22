@@ -27,7 +27,7 @@ if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
 
-const kbPath = path.join(__dirname, "data", "kb.json");
+const kbDir = path.join(__dirname, "data");
 
 let KB = [];
 let KB_WITH_EMBEDS = [];
@@ -63,20 +63,33 @@ function normalizeAudience(a) {
 
 async function loadKb() {
   try {
-    const raw = fs.readFileSync(kbPath, "utf-8");
-    KB = JSON.parse(raw);
-    // Precompute embeddings (title + content + tags)
+    const files = fs.readdirSync(kbDir).filter((f) => f.endsWith(".json"));
+    KB = [];
     KB_WITH_EMBEDS = [];
-    for (const item of KB) {
-      const audience = normalizeAudience(item.audience);
-      const text = `${item.title}\n${item.tags?.join(", ") || ""}\n${
-        item.content
-      }`;
-      const vec = await embedText(text);
-      KB_WITH_EMBEDS.push({ ...item, audience, vector: vec });
+
+    for (const file of files) {
+      const raw = fs.readFileSync(path.join(kbDir, file), "utf-8");
+      const parsed = JSON.parse(raw);
+
+      for (let i = 0; i < parsed.length; i++) {
+        const item = parsed[i];
+        const audience = normalizeAudience(item.audience);
+        const text = `${item.title}\n${item.tags?.join(", ") || ""}\n${
+          item.content
+        }`;
+        const vec = await embedText(text);
+        KB_WITH_EMBEDS.push({
+          ...item,
+          id: item.id ?? `${file}-${i + 1}`,
+          audience,
+          vector: vec,
+        });
+        KB.push(item);
+      }
     }
+
     console.log(
-      `[server] KB loaded with ${KB.length} items (dim=${EMBED_DIM})`
+      `[server] KB loaded with ${KB.length} items from ${files.length} files (dim=${EMBED_DIM})`
     );
   } catch (e) {
     console.error("[server] Failed to load KB:", e.message);
@@ -85,37 +98,62 @@ async function loadKb() {
 
 function retrieve(queryVec, audience = "guest", k = 5) {
   const aud = String(audience).toLowerCase();
+
   const pool = KB_WITH_EMBEDS.filter((it) => {
+    if (aud === "all") return true;
     if (!it.audience || it.audience.length === 0) return true;
     if (it.audience.includes("all")) return true;
     return it.audience.includes(aud);
   });
+
   const scored = pool.map((it) => ({
     item: it,
     score: cosineSim(queryVec, it.vector),
   }));
+
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, k).map((s) => s.item);
 }
 
 function buildPrompt({ question, audience, contexts }) {
   const contextText = contexts
-    .map((c, i) => `# Source ${i + 1}: ${c.title}\n${c.content}`)
+    .map((c, i) => `# Reference ${i + 1}: ${c.title}\n${c.content}`)
     .join("\n\n");
+
   return `
-You are an institutional assistant answering questions for an academic institution.
-Audience: ${audience}.
-Use ONLY the information from the "CONTEXT" below. If the answer is not present in the context, say:
-"I don't have that information in my knowledge base."
-Be concise, professional, and helpful. Include policy-sensitive disclaimers if relevant.
+You are an institutional assistant for an academic institution KJSIM (Kj Somaiya Institute of Management).
+
+Your role:
+- Answer questions for the given audience: **${audience}**.
+- Use ONLY the information provided in the "CONTEXT". 
+- If the answer is not in the context, respond with:
+  "I don't have that information in my knowledge base."
+
+How to respond:
+- Provide a **clear, detailed, and well-structured explanation**.
+- Break down policies, rules, or procedures in a way that any person (student, faculty, staff, or visitor) can easily understand.
+- Use simple, professional, and approachable language.
+- When the question relates to a policy, rule, or detailed process:
+  - Summarize the policy.
+  - Explain step by step how it works.
+  - Highlight important dates, requirements, or exceptions.
+  - Give examples if useful.
+- Do NOT just give a short answer — elaborate fully so the user feels confident they understand.
+- If relevant, add disclaimers (e.g., “Please confirm with the official office for the latest updates”).
+
+---
 
 CONTEXT:
 ${contextText}
 
+---
+
 QUESTION:
 ${question}
 
-RESPONSE:
+---
+
+DETAILED RESPONSE:
 `;
 }
 
@@ -131,7 +169,7 @@ app.post("/api/chat", async (req, res) => {
     }
 
     const queryVec = await embedText(String(lastUser.content));
-    const contexts = retrieve(queryVec, role, 5);
+    const contexts = retrieve(queryVec, role, 10);
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const prompt = buildPrompt({
@@ -145,7 +183,6 @@ app.post("/api/chat", async (req, res) => {
 
     return res.json({
       answer: text,
-      sources: contexts.map((c) => ({ id: c.id, title: c.title })),
     });
   } catch (e) {
     console.error("[server] /api/chat error:", e);
@@ -166,14 +203,16 @@ app.get("/api/keep-alive", (_, res) => {
 
 app.listen(PORT, async () => {
   console.log(
-    `[server] listening on https://custom-knowledgebase-chatbot-mini-project.onrender.com`
+    `[server] listening on http://localhost:${PORT} - env: ${
+      process.env.NODE_ENV || "dev"
+    }`
   );
   await loadKb();
 
   // 🔁 Start the keep-alive ping loop
   const SELF_URL =
     process.env.API_END_POINT ||
-    `https://custom-knowledgebase-chatbot-mini-project.onrender.com`;
+    `https://localhost:${PORT}`.replace("http://", "https://");
 
   setInterval(async () => {
     try {

@@ -1,4 +1,4 @@
-export type Audience = "student" | "faculty" | "staff" | "visitor"
+export type Audience = "student" | "faculty" | "staff" | "visitor" | "all"
 
 export type KBItem = {
   id: string

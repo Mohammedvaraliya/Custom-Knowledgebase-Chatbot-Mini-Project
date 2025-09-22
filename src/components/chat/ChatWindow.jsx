@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const ROLES = ["student", "faculty", "staff", "guest"];
+const ROLES = ["all", "student", "faculty", "staff", "guest"];
 const SUGGESTED_QUESTIONS = [
   "Scholarships & Financial Aid Overview",
   "Academic Calendar Highlights",
@@ -18,7 +18,7 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 export default function ChatWindow() {
-  const [role, setRole] = useState("student");
+  const [role, setRole] = useState("all");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState([
@@ -64,6 +64,7 @@ export default function ChatWindow() {
       if (!res.ok) throw new Error("Request failed");
 
       const data = await res.json();
+      console.log("Response data:", data);
       const answerText = data.answer || "I could not generate a response.";
       const sources = Array.isArray(data.sources) ? data.sources : [];
       const sourceText =

@@ -27,7 +27,7 @@ export async function getOrBuildEmbeddings() {
 
   const items = getKB()
 
-  const model = google.embedding(EMBEDDING_MODEL)
+  const model = google.textEmbedding(EMBEDDING_MODEL)
 
   const embeddings: KBEmbedding[] = []
   for (const it of items) {
@@ -45,15 +45,21 @@ export async function getOrBuildEmbeddings() {
 export async function retrieveRelevant(query: string, audience: Audience, k = 4) {
   const { items, embeddings } = await getOrBuildEmbeddings()
 
-  const model = google.embedding(EMBEDDING_MODEL)
+  const model = google.textEmbedding(EMBEDDING_MODEL)
   const { embedding: q } = await embed({ model, value: query })
 
   const scored = embeddings
     .map((e) => {
       const item = items.find((it) => it.id === e.id)!
+
+      // ✅ Audience matching logic
       const audienceMatch =
-        item.audience === "all" || (Array.isArray(item.audience) && item.audience.includes(audience))
+        audience === "all" ||
+        item.audience === "all" ||
+        (Array.isArray(item.audience) && item.audience.includes(audience))
+
       const bonus = audienceMatch ? 0.05 : 0
+
       return { item, score: cosineSimilarity(q, e.embedding) + bonus }
     })
     .sort((a, b) => b.score - a.score)
@@ -62,3 +68,4 @@ export async function retrieveRelevant(query: string, audience: Audience, k = 4)
 
   return scored
 }
+
