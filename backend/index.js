@@ -219,6 +219,11 @@ app.listen(PORT, async () => {
       "https://"
     );
 
+  // local testing
+  const SELF_URL_2 =
+    process.env.API_END_POINT ||
+    `http://localhost:${PORT}`.replace("http://", "https://");
+
   setInterval(async () => {
     try {
       console.log("⏰ Pinging keep-alive endpoint to keep server active...");
