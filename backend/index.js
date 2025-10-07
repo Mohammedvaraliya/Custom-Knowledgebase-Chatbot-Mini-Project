@@ -171,7 +171,9 @@ app.post("/api/chat", async (req, res) => {
     const queryVec = await embedText(String(lastUser.content));
     const contexts = retrieve(queryVec, role, 10);
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash-latest",
+    });
     const prompt = buildPrompt({
       question: lastUser.content,
       audience: role,
