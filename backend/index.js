@@ -21,7 +21,7 @@ app.use(express.json({ limit: "1mb" }));
 
 if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
   console.warn(
-    "[server] GOOGLE_GENERATIVE_AI_API_KEY is missing. Set it in .env"
+    "[server] GOOGLE_GENERATIVE_AI_API_KEY is missing. Set it in .env",
   );
 }
 
@@ -47,11 +47,20 @@ function cosineSim(a, b) {
 }
 
 async function embedText(text) {
-  const embedModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
-  const r = await embedModel.embedContent(text);
-  const v = r.embedding.values;
-  if (!EMBED_DIM) EMBED_DIM = v.length;
-  return v;
+  try {
+    const embedModel = genAI.getGenerativeModel({
+      model: "text-embedding-004",
+    });
+
+    const r = await embedModel.embedContent(text);
+    const v = r.embedding.values;
+
+    if (!EMBED_DIM) EMBED_DIM = v.length;
+    return v;
+  } catch (e) {
+    console.error("Embedding failed:", e.message);
+    return new Array(EMBED_DIM || 768).fill(0);
+  }
 }
 
 function normalizeAudience(a) {
@@ -89,7 +98,7 @@ async function loadKb() {
     }
 
     console.log(
-      `[server] KB loaded with ${KB.length} items from ${files.length} files (dim=${EMBED_DIM})`
+      `[server] KB loaded with ${KB.length} items from ${files.length} files (dim=${EMBED_DIM})`,
     );
   } catch (e) {
     console.error("[server] Failed to load KB:", e.message);
@@ -172,23 +181,22 @@ app.post("/api/chat", async (req, res) => {
     const contexts = retrieve(queryVec, role, 10);
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
+      model: "gemini-1.5-flash",
     });
     const prompt = buildPrompt({
       question: lastUser.content,
       audience: role,
       contexts,
     });
-    const result = await model.generateContent([{ text: prompt }]);
-    const text =
-      (await result.response.text()) || "I could not generate a response.";
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
     return res.json({
       answer: text,
     });
   } catch (e) {
-    console.error("[server] /api/chat error:", e);
-    return res.status(500).json({ error: "Server error generating answer." });
+    console.error("FULL ERROR:", e.response?.data || e.message || e);
   }
 });
 
@@ -207,29 +215,30 @@ app.listen(PORT, async () => {
   console.log(
     `[server] listening on https://custom-knowledgebase-chatbot-mini-project.onrender.com - env: ${
       process.env.NODE_ENV || "dev"
-    }`
+    }`,
   );
   await loadKb();
 
-  // 🔁 Start the keep-alive ping loop
+  // Start the keep-alive ping loop
   const SELF_URL =
-    process.env.API_END_POINT ||
-    `https://custom-knowledgebase-chatbot-mini-project.onrender.com`.replace(
-      "http://",
-      "https://"
-    );
+    process.env.NODE_ENV === "production"
+      ? "https://custom-knowledgebase-chatbot-mini-project.onrender.com"
+      : `http://localhost:${PORT}`;
 
   // local testing
   const SELF_URL_2 =
     process.env.API_END_POINT ||
     `http://localhost:${PORT}`.replace("http://", "https://");
 
-  setInterval(async () => {
-    try {
-      console.log("⏰ Pinging keep-alive endpoint to keep server active...");
-      await axios.get(`${SELF_URL}/api/keep-alive`);
-    } catch (e) {
-      console.error("[Keep-Alive Ping Error]", e.message);
-    }
-  }, 3 * 60 * 1000);
+  setInterval(
+    async () => {
+      try {
+        console.log("⏰ Pinging keep-alive endpoint to keep server active...");
+        await axios.get(`${SELF_URL}/api/keep-alive`);
+      } catch (e) {
+        console.error("[Keep-Alive Ping Error]", e.message);
+      }
+    },
+    3 * 60 * 1000,
+  );
 });
