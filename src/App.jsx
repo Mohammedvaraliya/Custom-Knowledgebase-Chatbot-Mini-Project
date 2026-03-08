@@ -57,8 +57,8 @@ export default function App() {
 
       {/* Footer */}
       <footer className="py-3 text-center text-[11px] text-slate-400 dark:text-slate-600 border-t border-black/[0.04] dark:border-white/[0.04]">
-        Responses generated from your institution's knowledge base &nbsp;·&nbsp;
-        Not saved between sessions
+        Responses generated from KJSIM's knowledge base &nbsp;·&nbsp; Not saved
+        between sessions
       </footer>
     </div>
   );
